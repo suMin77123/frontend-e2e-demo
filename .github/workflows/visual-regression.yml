@@ -36,6 +36,12 @@ jobs:
         sudo apt-get install -y imagemagick
         convert -version
       
+    - name: Install ImageMagick
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y imagemagick
+        convert -version
+
     - name: Run Playwright tests
       run: npx playwright test
         
@@ -62,29 +68,66 @@ jobs:
           function optimizeImage(inputPath, outputPath, maxWidth = 600, quality = 50) {
             try {
               console.log(`이미지 최적화 시도: ${inputPath} -> ${outputPath}`);
-              execSync(`convert "${inputPath}" -resize ${maxWidth}x -quality ${quality} -strip "${outputPath}"`, { stdio: 'inherit' });
+              
+              // 입력 파일 존재 확인
+              if (!fs.existsSync(inputPath)) {
+                console.error(`입력 파일이 존재하지 않음: ${inputPath}`);
+                return false;
+              }
+              
+              // 파일 크기 확인
+              const inputStats = fs.statSync(inputPath);
+              console.log(`입력 파일 크기: ${Math.round(inputStats.size / 1024)}KB`);
+              
+              // ImageMagick 명령 실행
+              const command = `convert "${inputPath}" -resize ${maxWidth}x -quality ${quality} -strip "${outputPath}"`;
+              console.log(`실행 명령: ${command}`);
+              
+              execSync(command, { stdio: 'inherit' });
+              
+              // 출력 파일 확인
               const success = fs.existsSync(outputPath);
+              if (success) {
+                const outputStats = fs.statSync(outputPath);
+                console.log(`출력 파일 크기: ${Math.round(outputStats.size / 1024)}KB`);
+                console.log(`압축률: ${Math.round((1 - outputStats.size / inputStats.size) * 100)}%`);
+              }
+              
               console.log(`최적화 결과: ${success ? '성공' : '실패'}`);
               return success;
             } catch (error) {
               console.error(`이미지 최적화 실패: ${inputPath} - ${error.message}`);
+              console.error(`에러 스택: ${error.stack}`);
               return false;
             }
           }
           
           // Base64로 이미지를 인코딩하는 함수
           function imageToBase64(imagePath) {
+            console.log(`Base64 인코딩 시작: ${imagePath}`);
+            
             if (!fs.existsSync(imagePath)) {
-              console.log(`이미지 파일이 존재하지 않음: ${imagePath}`);
+              console.error(`이미지 파일이 존재하지 않음: ${imagePath}`);
               return null;
             }
+            
             try {
+              const stats = fs.statSync(imagePath);
+              console.log(`파일 크기: ${Math.round(stats.size / 1024)}KB`);
+              
               const imageBuffer = fs.readFileSync(imagePath);
+              console.log(`버퍼 읽기 성공: ${imageBuffer.length} bytes`);
+              
               const base64 = `data:image/png;base64,${imageBuffer.toString('base64')}`;
               console.log(`Base64 인코딩 성공: ${imagePath} (${Math.round(base64.length/1024)}KB)`);
+              
+              // Base64 문자열의 시작 부분을 로깅 (디버깅용)
+              console.log(`Base64 시작 부분: ${base64.substring(0, 50)}...`);
+              
               return base64;
             } catch (error) {
               console.error(`Base64 인코딩 실패: ${imagePath} - ${error.message}`);
+              console.error(`에러 스택: ${error.stack}`);
               return null;
             }
           }
@@ -164,6 +207,9 @@ jobs:
               const expectedOptimized = path.join(optimizedDir, `expected-${index}.png`);
               if (optimizeImage(testResult.expectedPath, expectedOptimized)) {
                 expectedBase64 = imageToBase64(expectedOptimized);
+              } else {
+                console.log('최적화 실패, 원본 이미지 사용');
+                expectedBase64 = imageToBase64(testResult.expectedPath);
               }
             }
             
@@ -171,6 +217,9 @@ jobs:
               const actualOptimized = path.join(optimizedDir, `actual-${index}.png`);
               if (optimizeImage(testResult.actualPath, actualOptimized)) {
                 actualBase64 = imageToBase64(actualOptimized);
+              } else {
+                console.log('최적화 실패, 원본 이미지 사용');
+                actualBase64 = imageToBase64(testResult.actualPath);
               }
             }
             
@@ -178,18 +227,25 @@ jobs:
               const diffOptimized = path.join(optimizedDir, `diff-${index}.png`);
               if (optimizeImage(testResult.diffPath, diffOptimized)) {
                 diffBase64 = imageToBase64(diffOptimized);
+              } else {
+                console.log('최적화 실패, 원본 이미지 사용');
+                diffBase64 = imageToBase64(testResult.diffPath);
               }
             }
             
             console.log(`Base64 결과:`);
-            console.log(`  - Expected: ${expectedBase64 ? 'OK' : 'FAIL'}`);
-            console.log(`  - Actual: ${actualBase64 ? 'OK' : 'FAIL'}`);
-            console.log(`  - Diff: ${diffBase64 ? 'OK' : 'FAIL'}`);
+            console.log(`  - Expected: ${expectedBase64 ? 'OK (' + Math.round(expectedBase64.length/1024) + 'KB)' : 'FAIL'}`);
+            console.log(`  - Actual: ${actualBase64 ? 'OK (' + Math.round(actualBase64.length/1024) + 'KB)' : 'FAIL'}`);
+            console.log(`  - Diff: ${diffBase64 ? 'OK (' + Math.round(diffBase64.length/1024) + 'KB)' : 'FAIL'}`);
             
             if (!actualBase64) {
-              console.log('실제 이미지가 없어서 HTML 생성 건너뜀');
+              console.error('실제 이미지가 없어서 HTML 생성 건너뜀');
+              console.error('파일 경로 재확인:', testResult.actualPath);
+              console.error('파일 존재 여부:', fs.existsSync(testResult.actualPath));
               return '';
             }
+            
+            console.log('HTML 생성 진행...');
             
             const containerId = `comparison-${index}`;
             
