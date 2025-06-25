@@ -63,7 +63,7 @@
         justify-content: center;
         align-items: center;
         min-height: 100vh;
-        padding: 1rem;
+        padding: 10rem;
     }
     
     .auth-form {
