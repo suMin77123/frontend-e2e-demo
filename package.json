@@ -10,10 +10,7 @@
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"test:e2e": "playwright test",
-		"test": "npm run test:e2e",
-		"visual-report": "node scripts/generate-visual-report.js",
-		"post-pr-comment": "node scripts/post-pr-comment.js"
+		"test:e2e": "playwright test"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.49.1",
@@ -22,7 +19,6 @@
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@tailwindcss/vite": "^4.0.0",
 		"@types/node": "^24.0.4",
-		"form-data": "^4.0.1",
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
 		"tailwindcss": "^4.0.0",
