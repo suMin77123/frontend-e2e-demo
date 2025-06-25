@@ -26,30 +26,82 @@ jobs:
     - name: Install dependencies
       run: npm ci
       
+    # 브랜치명 설정
+    - name: Set branch name
+      id: branch
+      run: |
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          echo "branch_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+        else
+          echo "branch_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+        fi
+
     - name: Install Playwright browsers
       run: npx playwright install --with-deps
       
     - name: Run Playwright tests
-      run: npx playwright test --reporter=html
-      continue-on-error: true
+      run: npx playwright test --reporter=html --output-dir=${{ steps.branch.outputs.branch_name }}
 
     # 성공/실패 여부와 관계없이 HTML 리포트 업로드 (2-up, Swipe, Onion Skin 지원)
     - name: Upload Playwright HTML Report
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: playwright-report
-        path: playwright-report/
+        name: playwright-report-${{ steps.branch.outputs.branch_name }}
+        path: ${{ steps.branch.outputs.branch_name }}/
         retention-days: 30
         
     - name: Upload visual comparison results
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: visual-comparison-diffs
+        name: visual-comparison-diffs-${{ steps.branch.outputs.branch_name }}
         path: |
           test-results/**/*.png
           test-results/**/*-diff.png
           test-results/**/*-actual.png
           test-results/**/*-expected.png
         retention-days: 30
+
+    # MinIO에 리포트 업로드
+    - name: Setup MinIO Client
+      if: always()
+      run: |
+        wget https://dl.min.io/client/mc/release/linux-amd64/mc
+        chmod +x mc
+        sudo mv mc /usr/local/bin/
+        mc alias set --insecure pia http://macs.pia.space:32702 ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }}
+
+    - name: Upload to MinIO
+      if: always()
+      run: |
+        mc rm --recursive --force pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
+        mc cp --recursive ${{ steps.branch.outputs.branch_name }}/ pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
+        mc anonymous set download pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
+
+    # PR에 코멘트 추가
+    - name: Comment PR with report link
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const branchName = '${{ steps.branch.outputs.branch_name }}';
+          const reportUrl = `http://macs.pia.space:32702/${branchName}/index.html`;
+          
+          const comment = `## 📸 Visual Regression Test Report
+          
+          리포트가 생성되었습니다: [테스트 리포트 보기](${reportUrl})
+          
+          🔍 리포트에서 다음을 확인할 수 있습니다:
+          - 스크린샷 비교 결과
+          - 실패한 테스트의 Before/After 비교
+          - 2-up, Swipe, Onion Skin 뷰 지원
+          
+          브랜치: \`${branchName}\``;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
