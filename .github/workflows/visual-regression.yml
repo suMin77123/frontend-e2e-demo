@@ -5,9 +5,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [ main ]
-  # main 브랜치 push시 실행
-  push:
-    branches: [ main ]
 
 jobs:
   test:
@@ -31,13 +28,34 @@ jobs:
       
     - name: Run Playwright tests
       run: npx playwright test
+      continue-on-error: true  # 테스트 실패해도 리포트 생성을 위해 계속 진행
+        
+    - name: Generate Visual Report
+      if: always()  # 테스트 성공/실패와 관계없이 항상 실행
+      env:
+        IMGUR_CLIENT_ID: ${{ secrets.IMGUR_CLIENT_ID }}
+        GITHUB_PR_NUMBER: ${{ github.event.number }}
+        GITHUB_SHA: ${{ github.sha }}
+      run: npm run visual-report
+        
+    - name: Post PR Comment
+      if: always()
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_PR_NUMBER: ${{ github.event.number }}
+        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+      run: npm run post-pr-comment
         
     - name: Upload visual comparison results
-      if: failure()
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: visual-comparison-report
         path: |
           test-results/**/*.png
           test-results/**/*-diff.png
+          visual-reports/**/*.html
+          visual-reports/**/*.json
         retention-days: 30 
