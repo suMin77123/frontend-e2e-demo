@@ -29,6 +29,12 @@ jobs:
       
     - name: Install Playwright browsers
       run: npx playwright install --with-deps
+
+    - name: Install ImageMagick
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y imagemagick
+        convert -version
       
     - name: Run Playwright tests
       run: npx playwright test
@@ -55,10 +61,13 @@ jobs:
           // 이미지 최적화 함수 (ImageMagick 사용)
           function optimizeImage(inputPath, outputPath, maxWidth = 600, quality = 50) {
             try {
-              execSync(`convert "${inputPath}" -resize ${maxWidth}x -quality ${quality} -strip "${outputPath}"`);
-              return fs.existsSync(outputPath);
+              console.log(`이미지 최적화 시도: ${inputPath} -> ${outputPath}`);
+              execSync(`convert "${inputPath}" -resize ${maxWidth}x -quality ${quality} -strip "${outputPath}"`, { stdio: 'inherit' });
+              const success = fs.existsSync(outputPath);
+              console.log(`최적화 결과: ${success ? '성공' : '실패'}`);
+              return success;
             } catch (error) {
-              console.log(`이미지 최적화 실패: ${inputPath} - ${error.message}`);
+              console.error(`이미지 최적화 실패: ${inputPath} - ${error.message}`);
               return false;
             }
           }
@@ -66,10 +75,18 @@ jobs:
           // Base64로 이미지를 인코딩하는 함수
           function imageToBase64(imagePath) {
             if (!fs.existsSync(imagePath)) {
+              console.log(`이미지 파일이 존재하지 않음: ${imagePath}`);
               return null;
             }
-            const imageBuffer = fs.readFileSync(imagePath);
-            return `data:image/png;base64,${imageBuffer.toString('base64')}`;
+            try {
+              const imageBuffer = fs.readFileSync(imagePath);
+              const base64 = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+              console.log(`Base64 인코딩 성공: ${imagePath} (${Math.round(base64.length/1024)}KB)`);
+              return base64;
+            } catch (error) {
+              console.error(`Base64 인코딩 실패: ${imagePath} - ${error.message}`);
+              return null;
+            }
           }
           
           // 테스트 결과 찾기
@@ -77,16 +94,22 @@ jobs:
             const testResultsDir = 'test-results';
             const results = [];
             
+            console.log(`테스트 결과 디렉토리 확인: ${testResultsDir}`);
             if (!fs.existsSync(testResultsDir)) {
+              console.log('test-results 디렉토리가 존재하지 않습니다.');
               return results;
             }
             
             const testDirs = fs.readdirSync(testResultsDir)
               .filter(dir => fs.statSync(path.join(testResultsDir, dir)).isDirectory());
             
+            console.log(`발견된 테스트 디렉토리들: ${testDirs.join(', ')}`);
+            
             for (const testDir of testDirs) {
               const testPath = path.join(testResultsDir, testDir);
               const files = fs.readdirSync(testPath);
+              
+              console.log(`${testDir} 디렉토리의 파일들: ${files.join(', ')}`);
               
               const screenshots = files.filter(file => 
                 file.endsWith('.png') && !file.includes('-previous') && !file.includes('-diff')
@@ -98,6 +121,11 @@ jobs:
                 const actualPath = path.join(testPath, screenshot);
                 const diffPath = path.join(testPath, `${baseName}-diff.png`);
                 
+                console.log(`스크린샷 분석:`);
+                console.log(`  - Expected: ${expectedPath} (존재: ${fs.existsSync(expectedPath)})`);
+                console.log(`  - Actual: ${actualPath} (존재: ${fs.existsSync(actualPath)})`);
+                console.log(`  - Diff: ${diffPath} (존재: ${fs.existsSync(diffPath)})`);
+                
                 const hasDiff = fs.existsSync(diffPath);
                 
                 if (hasDiff || !fs.existsSync(expectedPath)) {
@@ -108,6 +136,7 @@ jobs:
                     diffPath: hasDiff ? diffPath : null,
                     hasChanges: true
                   });
+                  console.log(`변경사항 추가: ${testDir} - ${baseName}`);
                 }
               }
             }
@@ -117,10 +146,13 @@ jobs:
           
           // 인터랙티브 HTML 생성 (최적화된 이미지 사용)
           function generateInteractiveHTML(testResult, index) {
+            console.log(`\n=== ${testResult.testName} HTML 생성 시작 ===`);
+            
             // 최적화된 이미지 디렉토리 생성
             const optimizedDir = 'optimized-images';
             if (!fs.existsSync(optimizedDir)) {
               fs.mkdirSync(optimizedDir, { recursive: true });
+              console.log(`최적화 디렉토리 생성: ${optimizedDir}`);
             }
             
             // 이미지 최적화 및 Base64 인코딩
@@ -149,11 +181,19 @@ jobs:
               }
             }
             
-            if (!actualBase64) return '';
+            console.log(`Base64 결과:`);
+            console.log(`  - Expected: ${expectedBase64 ? 'OK' : 'FAIL'}`);
+            console.log(`  - Actual: ${actualBase64 ? 'OK' : 'FAIL'}`);
+            console.log(`  - Diff: ${diffBase64 ? 'OK' : 'FAIL'}`);
+            
+            if (!actualBase64) {
+              console.log('실제 이미지가 없어서 HTML 생성 건너뜀');
+              return '';
+            }
             
             const containerId = `comparison-${index}`;
             
-            return `
+            const html = `
           <details>
           <summary><strong>${testResult.testName}</strong></summary>
           
@@ -287,6 +327,9 @@ jobs:
           </script>
           </details>
           `;
+          
+          console.log(`HTML 생성 완료 (길이: ${html.length}자)`);
+          return html;
           }
           
           // 메인 실행
@@ -360,9 +403,13 @@ jobs:
           `;
           
           // 각 테스트 결과에 대한 HTML 생성
+          let totalHtmlLength = 0;
           testResults.forEach((result, index) => {
-            console.log(`최적화된 이미지 생성 중: ${result.testName}`);
-            commentBody += generateInteractiveHTML(result, index);
+            console.log(`\n최적화된 이미지 생성 중: ${result.testName}`);
+            const html = generateInteractiveHTML(result, index);
+            commentBody += html;
+            totalHtmlLength += html.length;
+            console.log(`현재 총 HTML 길이: ${totalHtmlLength}자`);
           });
           
           commentBody += `
@@ -375,6 +422,8 @@ jobs:
 
           ---
           *이 댓글은 GitHub Actions에 의해 자동으로 생성되었습니다.*`;
+          
+          console.log(`\n최종 댓글 길이: ${commentBody.length}자`);
           
           // 기존 댓글 찾기
           const { data: comments } = await github.rest.issues.listComments({
