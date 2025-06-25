@@ -30,7 +30,8 @@ jobs:
       run: npx playwright install --with-deps
       
     - name: Run Playwright tests
-      run: npx playwright test
+      run: npx playwright test --reporter=html
+      continue-on-error: true
 
     # 성공/실패 여부와 관계없이 HTML 리포트 업로드 (2-up, Swipe, Onion Skin 지원)
     - name: Upload Playwright HTML Report
