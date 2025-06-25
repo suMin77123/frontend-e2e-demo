@@ -43,13 +43,13 @@ test.describe('Visual regression tests', () => {
 	test('login page screenshot', async ({ page }) => {
 		await page.goto('/login');
 		await page.waitForLoadState('networkidle');
-		await expect(page).toHaveScreenshot(`login-${platform}.png`);
+		await expect(page).toHaveScreenshot();
 	});
 
 	test('register page screenshot', async ({ page }) => {
 		await page.goto('/register');
 		await page.waitForLoadState('networkidle');
-		await expect(page).toHaveScreenshot(`register-${platform}.png`);
+		await expect(page).toHaveScreenshot();
 	});
 
 	test('todo list page screenshot', async ({ page }) => {
@@ -68,7 +68,7 @@ test.describe('Visual regression tests', () => {
 		await page.waitForLoadState('networkidle');
 		
 		// 스크린샷 생성
-		await expect(page).toHaveScreenshot(`todo-list-${platform}.png`);
+		await expect(page).toHaveScreenshot();
 	});
 });
 
@@ -81,5 +81,5 @@ test('basic screenshot test', async ({ page }) => {
 	await page.waitForLoadState('networkidle');
 	
 	// 3. 스크린샷 생성
-	await expect(page).toHaveScreenshot(`home-${platform}.png`);
+	await expect(page).toHaveScreenshot();
 });
