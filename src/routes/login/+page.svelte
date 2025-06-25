@@ -68,7 +68,7 @@
     
     .auth-form {
         background: white;
-        padding: 10rem;
+        padding: 2rem;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         width: 100%;
@@ -102,7 +102,7 @@
     button {
         width: 100%;
         padding: 0.75rem;
-        font-size: 3rem;
+        font-size: 1rem;
         color: white;
         background-color: #4CAF50;
         border: none;
