@@ -3,7 +3,10 @@ name: Visual Regression Testing
 on:
   # PR 생성 및 업데이트시 실행
   pull_request:
-    types: [synchronize, reopened]
+    types: [opened, synchronize, reopened]
+    branches: [ main ]
+  # main 브랜치 push시 실행
+  push:
     branches: [ main ]
 
 jobs:
@@ -28,57 +31,13 @@ jobs:
       
     - name: Run Playwright tests
       run: npx playwright test
-      
-    - name: Prepare snapshot comparison
-      if: always()
-      run: |
-        # main 브랜치의 스냅샷 저장
-        git checkout main
-        mkdir -p snapshots/main
-        cp -r e2e/demo.test.ts-snapshots/* snapshots/main/
         
-        # PR 브랜치의 스냅샷 저장
-        git checkout ${{ github.head_ref }}
-        mkdir -p snapshots/pr
-        cp -r e2e/demo.test.ts-snapshots/* snapshots/pr/
-        
-    - name: Comment PR with image comparisons
-      if: always()
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const fs = require('fs');
-          const path = require('path');
-          
-          const mainDir = 'snapshots/main';
-          const prDir = 'snapshots/pr';
-          
-          const mainFiles = fs.readdirSync(mainDir);
-          let comment = '## 시각적 회귀 테스트 결과\n\n';
-          
-          for (const file of mainFiles) {
-            if (fs.existsSync(path.join(prDir, file))) {
-              comment += `### ${file}\n`;
-              comment += `<details><summary>변경사항 보기</summary>\n\n`;
-              comment += `#### 기존 이미지 (main)\n`;
-              comment += `![main](${path.join(mainDir, file)})\n\n`;
-              comment += `#### 새 이미지 (PR)\n`;
-              comment += `![pr](${path.join(prDir, file)})\n\n`;
-              comment += `</details>\n\n`;
-            }
-          }
-          
-          await github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-            body: comment
-          });
-        
-    - name: Upload snapshots
-      if: always()
+    - name: Upload visual comparison results
+      if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: visual-comparison-snapshots
-        path: snapshots
+        name: visual-comparison-report
+        path: |
+          test-results/**/*.png
+          test-results/**/*-diff.png
         retention-days: 30 
