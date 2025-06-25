@@ -174,7 +174,7 @@
         />
         <datalist id="categories">
             {#each categories as category}
-                <option value={category} />
+                <option value={category}></option>
             {/each}
         </datalist>
         <input
