@@ -78,6 +78,7 @@ jobs:
         mc alias set --insecure pia http://macs.pia.space:32702 ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }}
         mc rm --recursive --force pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
         mc cp --recursive playwright-report/ pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
+        mc cp --recursive test-results/**/*.png pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
         mc anonymous set download pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
 
     # PR에 코멘트 추가
