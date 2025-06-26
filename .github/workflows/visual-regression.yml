@@ -40,22 +40,22 @@ jobs:
       run: npx playwright install --with-deps
       
     - name: Run Playwright tests
-      run: npx playwright test --reporter=html --output-dir=${{ steps.branch.outputs.branch_name }}
+      run: npx playwright test --reporter=html
 
     # 성공/실패 여부와 관계없이 HTML 리포트 업로드 (2-up, Swipe, Onion Skin 지원)
     - name: Upload Playwright HTML Report
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: playwright-report-${{ steps.branch.outputs.branch_name }}
-        path: ${{ steps.branch.outputs.branch_name }}/
+        name: playwright-report
+        path: playwright-report/
         retention-days: 30
         
     - name: Upload visual comparison results
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: visual-comparison-diffs-${{ steps.branch.outputs.branch_name }}
+        name: visual-comparison-diffs
         path: |
           test-results/**/*.png
           test-results/**/*-diff.png
@@ -77,7 +77,7 @@ jobs:
       run: |
         mc alias set --insecure pia http://macs.pia.space:32702 ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }}
         mc rm --recursive --force pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
-        mc cp --recursive ${{ steps.branch.outputs.branch_name }}/ pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
+        mc cp --recursive playwright-report/ pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
         mc anonymous set download pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
 
     # PR에 코멘트 추가
