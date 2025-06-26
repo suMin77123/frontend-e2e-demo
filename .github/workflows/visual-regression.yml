@@ -96,7 +96,7 @@ jobs:
       with:
         script: |
           const branchName = '${{ steps.branch.outputs.branch_name }}';
-          const reportUrl = `http://macs.pia.space:32702/${branchName}/index.html`;
+          const reportUrl = `http://macs.pia.space:32702/frontend-e2e-demo/${branchName}/index.html`;
           
           const comment = `## 📸 Visual Regression Test Report
           
