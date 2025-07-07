@@ -124,7 +124,11 @@ jobs:
           - 실패한 테스트의 Before/After 비교
           - 2-up, Swipe, Onion Skin 뷰 지원
           
-          브랜치: \`${branchName}\``;
+          브랜치: \`${branchName}\`
+          리포트 생성 시간: \`${startedAt}\`
+          
+          ✋🏻 의도된 변경 사항이라면?
+          Labels에 \`Intended-Changes\` 라벨을 추가해주세요.`;
           
           github.rest.issues.createComment({
             issue_number: context.issue.number,
