@@ -60,7 +60,7 @@
                 />
             </div>
             
-            <button type="submit">회원가입</button>
+            <button type="submit">회원GA입</button>
         </form>
         
         <div class="auth-links">
