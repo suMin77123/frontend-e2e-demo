@@ -182,11 +182,11 @@
             bind:value={newTodoDueDate}
             class="date-input"
         />
-        <button type="submit" class="add-button">추추추추추가</button>
+        <button type="submit" class="add-button">추가</button>
     </form>
     
     {#if loading}
-        <div class="loading">로딩 중학교...</div>
+        <div class="loading">로딩 중...</div>
     {:else}
         <ul class="todo-list">
             {#each $todos as todo (todo.id)}
