@@ -31,17 +31,10 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '22'
-        
-    - name: Cache Node.js modules
-      uses: actions/cache@v4
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
+        cache: 'npm'
 
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --prefer-offline --no-audit --no-fund
       
     # 브랜치명 설정
     - name: Set branch name
@@ -55,6 +48,7 @@ jobs:
 
     - name: Cache Playwright browsers
       uses: actions/cache@v4
+      id: cache-playwright-browsers
       with:
         path: ~/.cache/ms-playwright
         key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
@@ -62,6 +56,7 @@ jobs:
           ${{ runner.os }}-playwright-
 
     - name: Install Playwright browsers
+      if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
       run: npx playwright install --with-deps
       
     - name: Run Playwright tests
@@ -89,8 +84,16 @@ jobs:
         retention-days: 30
 
     # MinIO에 리포트 업로드
-    - name: Setup MinIO Client
+    - name: Cache MinIO Client
       if: always()
+      uses: actions/cache@v4
+      id: cache-minio-client
+      with:
+        path: /usr/local/bin/mc
+        key: ${{ runner.os }}-minio-client
+
+    - name: Setup MinIO Client
+      if: always() && steps.cache-minio-client.outputs.cache-hit != 'true'
       run: |
         wget https://dl.min.io/client/mc/release/linux-amd64/mc
         chmod +x mc
