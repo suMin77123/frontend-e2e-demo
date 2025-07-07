@@ -23,6 +23,14 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # 전체 히스토리 가져오기
+
+    # 워크플로우 시작 시간 설정
+    - name: Set workflow start time
+      id: start_time
+      run: |
+        START_TIME=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+        echo "workflow_started_at=${START_TIME}" >> $GITHUB_OUTPUT
+        echo "Started at: ${START_TIME}"
     
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -98,11 +106,8 @@ jobs:
       if: always()
       run: |
         mc alias set --insecure pia http://macs.pia.space:32702 ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }}
-        mc rm --recursive --force pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
-        mc cp --recursive playwright-report/ pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
-        if [ -d "test-results" ] && find test-results -name "*.png" | grep -q .; then
-          mc cp --recursive test-results/**/*.png pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
-        fi
+        mc cp --recursive playwright-report pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/${{ steps.start_time.outputs.workflow_started_at }}/
+        mc cp --recursive test-results pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/${{ steps.start_time.outputs.workflow_started_at }}/
         mc anonymous set download pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
 
     # PR에 코멘트 추가
@@ -112,7 +117,8 @@ jobs:
       with:
         script: |
           const branchName = '${{ steps.branch.outputs.branch_name }}';
-          const reportUrl = `http://macs.pia.space:32702/frontend-e2e-demo/${branchName}/index.html`;
+          const startedAt = '${{ steps.start_time.outputs.workflow_started_at }}';
+          const reportUrl = `http://macs.pia.space:32702/frontend-e2e-demo/${branchName}/${startedAt}/playwright-report/index.html`;
           
           const comment = `## 📸 Visual Regression Test Report
           
