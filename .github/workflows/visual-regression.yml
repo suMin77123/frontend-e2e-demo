@@ -31,17 +31,10 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '22'
-        
-    - name: Cache Node.js modules
-      uses: actions/cache@v4
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
+        cache: 'npm'
 
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --prefer-offline --no-audit --no-fund
       
     # 브랜치명 설정
     - name: Set branch name
