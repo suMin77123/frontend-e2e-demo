@@ -182,7 +182,7 @@
             bind:value={newTodoDueDate}
             class="date-input"
         />
-        <button type="submit" class="add-button">추가</button>
+        <button type="submit" class="add-button">추추추추추가</button>
     </form>
     
     {#if loading}
