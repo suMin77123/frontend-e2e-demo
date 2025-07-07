@@ -20,7 +20,7 @@
 
 <div class="container">
     <div class="auth-form">
-        <h1>회원가입</h1>
+        <h1>회원장님가입</h1>
         
         {#if error}
             <div class="error">{error}</div>
