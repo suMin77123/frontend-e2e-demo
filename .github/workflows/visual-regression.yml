@@ -82,8 +82,16 @@ jobs:
         retention-days: 30
 
     # MinIO에 리포트 업로드
-    - name: Setup MinIO Client
+    - name: Cache MinIO Client
       if: always()
+      uses: actions/cache@v4
+      id: cache-minio-client
+      with:
+        path: /usr/local/bin/mc
+        key: ${{ runner.os }}-minio-client
+
+    - name: Setup MinIO Client
+      if: always() && steps.cache-minio-client.outputs.cache-hit != 'true'
       run: |
         wget https://dl.min.io/client/mc/release/linux-amd64/mc
         chmod +x mc
