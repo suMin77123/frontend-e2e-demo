@@ -122,10 +122,10 @@ jobs:
           🔍 리포트에서 다음을 확인할 수 있습니다:
           - 스크린샷 비교 결과
           - 실패한 테스트의 Before/After 비교
-          - 2-up, Swipe, Onion Skin 뷰 지원
+          - Diff, Side-by-Side, Slider 뷰 지원
           
           브랜치: \`${branchName}\`
-          리포트 생성 시간: \`${startedAt}\`
+          리포트 생성 시간: ${new Date(startedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
           
           ✋🏻 의도된 변경 사항이라면?
           Labels에 \`Intended-Changes\` 라벨을 추가해주세요.`;
