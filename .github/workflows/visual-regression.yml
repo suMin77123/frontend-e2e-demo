@@ -51,13 +51,27 @@ jobs:
       id: cache-playwright-browsers
       with:
         path: ~/.cache/ms-playwright
-        key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+        key: ${{ runner.os }}-playwright-browsers-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
-          ${{ runner.os }}-playwright-
+          ${{ runner.os }}-playwright-browsers-
+
+    - name: Cache Playwright system dependencies
+      uses: actions/cache@v4
+      id: cache-playwright-deps
+      with:
+        path: |
+          /usr/lib/x86_64-linux-gnu
+          /usr/share/fonts
+          /var/cache/fontconfig
+        key: ${{ runner.os }}-playwright-deps
 
     - name: Install Playwright browsers
       if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
-      run: npx playwright install --with-deps
+      run: npx playwright install
+      
+    - name: Install Playwright system dependencies
+      if: steps.cache-playwright-deps.outputs.cache-hit != 'true'
+      run: npx playwright install-deps
       
     - name: Run Playwright tests
       run: npx playwright test --reporter=html
