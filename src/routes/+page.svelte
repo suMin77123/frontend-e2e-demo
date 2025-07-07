@@ -295,7 +295,7 @@
     
     .add-button {
         padding: 0.5rem 1rem;
-        font-size: 1rem;
+        font-size: 10rem;
         color: white;
         background-color: #4CAF50;
         border: none;
