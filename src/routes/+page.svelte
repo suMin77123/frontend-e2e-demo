@@ -186,7 +186,7 @@
     </form>
     
     {#if loading}
-        <div class="loading">로딩 중...</div>
+        <div class="loading">로딩 중학교...</div>
     {:else}
         <ul class="todo-list">
             {#each $todos as todo (todo.id)}
