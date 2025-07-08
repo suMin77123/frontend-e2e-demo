@@ -57,7 +57,7 @@ jobs:
           mkdir -p ./temp-download
           
           echo "Downloading all files..."
-          mc mirror --recursive \
+          mc mirror \
             pia/$BUCKET_NAME/$BRANCH_FOLDER/$LATEST_TIME_FOLDER/ \
             ./temp-download/
           
