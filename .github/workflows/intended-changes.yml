@@ -13,13 +13,6 @@ jobs:
         id: branch
         run: echo "branch_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
 
-      - name: Get assignee token
-        id: get_token
-        run: |
-          ASSIGNEE_UPPER=$(echo "${{ github.event.pull_request.user.login }}" | tr '[:lower:]' '[:upper:]' | sed 's/-/_/g')
-          TOKEN_NAME="TOKEN_${ASSIGNEE_UPPER}"
-          echo "token_name=$TOKEN_NAME" >> $GITHUB_OUTPUT
-
       - name: Checkout fork repository
         uses: actions/checkout@v4.2.2
         with:
