@@ -39,7 +39,7 @@ jobs:
           BRANCH_FOLDER="${{ steps.branch.outputs.branch_name }}"
 
           LATEST_TIME_FOLDER=$(mc ls pia/$BUCKET_NAME/$BRANCH_FOLDER/ | \
-            grep -E "PRE.*[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z" | \
+            grep -E "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z" | \
             awk '{print $NF}' | \
             sed 's/\///g' | \
             sort -r | \
