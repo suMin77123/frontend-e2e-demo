@@ -54,15 +54,22 @@ jobs:
 
           echo "Latest time folder: $LATEST_TIME_FOLDER"
           
-          mkdir -p ./downloaded-actuals
+          mkdir -p ./temp-download
           
-          echo "Downloading actual images..."
-          mc mirror --include "*-actual.png" --recursive \
+          echo "Downloading all files..."
+          mc mirror --recursive \
             pia/$BUCKET_NAME/$BRANCH_FOLDER/$LATEST_TIME_FOLDER/ \
-            ./downloaded-actuals/
+            ./temp-download/
+          
+          echo "Moving actual images to target folder..."
+          mkdir -p ./downloaded-actuals
+          find ./temp-download -name "*-actual.png" -type f -exec cp {} ./downloaded-actuals/ \;
+          
+          echo "Cleaning up temporary folder..."
+          rm -rf ./temp-download
           
           echo "Download completed!"
-          echo "Downloaded files:"
+          echo "Downloaded actual image files:"
           find ./downloaded-actuals -name "*-actual.png" -type f
 
       - name: Apply intended changes
