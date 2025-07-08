@@ -147,7 +147,7 @@ jobs:
           리포트 생성 시간: ${new Date(startedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
           
           ✋🏻 의도된 변경 사항이라면?
-          Labels에 \`Intended-Changes\` 라벨을 추가해주세요.`;
+          Labels에 \`🎨 Intended-Changes\` 라벨을 추가해주세요.`;
           
           github.rest.issues.createComment({
             issue_number: context.issue.number,
