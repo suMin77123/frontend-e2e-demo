@@ -38,7 +38,7 @@
             </div>
             
             <div class="form-group">
-                <label for="password">비밀번호</label>
+                <label for="password">비밀번호486</label>
                 <input
                     type="password"
                     id="password"
