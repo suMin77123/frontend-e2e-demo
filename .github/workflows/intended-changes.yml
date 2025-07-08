@@ -114,4 +114,4 @@ jobs:
           git checkout -B ${{ steps.branch.outputs.branch_name }}
           git add .
           git commit --allow-empty -m "chore: update snapshots for Intended-Changes"
-          git push origin ${{ steps.branch.outputs.branch_name }}
+          git push origin ${{ steps.branch.outputs.branch_name }} --force
