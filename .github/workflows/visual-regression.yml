@@ -118,6 +118,7 @@ jobs:
 
     # MinIO에 리포트 업로드
     - name: Cache MinIO Client
+      if: always()
       uses: actions/cache@v4
       id: cache-minio-client
       with:
@@ -125,7 +126,7 @@ jobs:
         key: ${{ runner.os }}-minio-client
 
     - name: Setup MinIO Client
-      if: steps.cache-minio-client.outputs.cache-hit != 'true'
+      if: always() && steps.cache-minio-client.outputs.cache-hit != 'true'
       run: |
         wget https://dl.min.io/client/mc/release/linux-amd64/mc
         chmod +x mc
@@ -133,6 +134,7 @@ jobs:
         echo "MinIO Client (mc) has been installed successfully!"
 
     - name: Upload to MinIO
+      if: always()
       run: |
         mc alias set --insecure pia http://macs.pia.space:32702 ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }}
         mc cp --recursive playwright-report pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/${{ steps.start_time.outputs.workflow_started_at }}/
@@ -141,6 +143,7 @@ jobs:
 
     # PR에 코멘트 추가
     - name: Comment PR with report link
+      if: always()
       uses: actions/github-script@v7
       with:
         script: |
