@@ -129,7 +129,7 @@
             on:change={handleFilterChange}
         >
             <option value={undefined}>모든 상태</option>
-            <option value={false}>미완료</option>
+            <option value={false}>미미미미미완료</option>
             <option value={true}>완료</option>
         </select>
         
