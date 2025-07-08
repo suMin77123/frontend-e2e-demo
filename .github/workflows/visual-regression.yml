@@ -4,6 +4,12 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to test'
+        required: true
+        default: 'main'
 
 permissions:
   contents: read
@@ -135,7 +141,7 @@ jobs:
         mc anonymous set download pia/frontend-e2e-demo/${{ steps.branch.outputs.branch_name }}/
 
     - name: Comment PR with report link
-      if: always()
+      if: always() && github.event_name == 'pull_request'
       uses: actions/github-script@v7
       with:
         script: |
