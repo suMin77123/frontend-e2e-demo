@@ -13,12 +13,8 @@ jobs:
         id: branch
         run: echo "branch_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
 
-      - name: Checkout fork repository
-        uses: actions/checkout@v4.2.2
-        with:
-          repository: ${{ github.event.pull_request.user.login }}/${{ github.event.repository.name }}
-          ref: ${{ steps.branch.outputs.branch_name }}
-          token: ${{ secrets[steps.get_token.outputs.token_name] }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Cache MinIO Client
         uses: actions/cache@v4
