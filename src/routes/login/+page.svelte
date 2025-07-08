@@ -104,7 +104,7 @@
         padding: 0.75rem;
         font-size: 1rem;
         color: white;
-        background-color: #4CAF50;
+        background-color: #8c96fe;
         border: none;
         border-radius: 4px;
         cursor: pointer;
@@ -112,7 +112,7 @@
     }
     
     button:hover {
-        background-color: #45a049;
+        background-color: #1628f7;
     }
     
     .error {
