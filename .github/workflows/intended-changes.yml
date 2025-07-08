@@ -7,6 +7,9 @@ on:
 jobs:
   intended-changes-apply:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
     if: contains(github.event.pull_request.labels.*.name, '🎨 Intended-Changes')
     steps:
       - name: Set branch name
