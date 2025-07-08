@@ -39,12 +39,7 @@ jobs:
     # 브랜치명 설정
     - name: Set branch name
       id: branch
-      run: |
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
-          echo "branch_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
-        else
-          echo "branch_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-        fi
+      run: echo "branch_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
 
     - name: Cache Playwright browsers
       uses: actions/cache@v4
