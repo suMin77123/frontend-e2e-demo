@@ -19,7 +19,7 @@
 
 <div class="container">
     <div class="auth-form">
-        <h1>로시난테그인</h1>
+        <h1>로그인</h1>
         
         {#if error}
             <div class="error">{error}</div>
