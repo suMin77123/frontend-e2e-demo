@@ -108,6 +108,7 @@ jobs:
         run: |
           git config --global user.name "${{ github.event.pull_request.user.login }}"
           git config --global user.email "${{ github.event.pull_request.user.login }}@users.noreply.github.com"
+          git checkout -B ${{ steps.branch.outputs.branch_name }}
           git add .
           git commit --allow-empty -m "chore: update snapshots for Intended-Changes"
           git push origin ${{ steps.branch.outputs.branch_name }}
