@@ -1,0 +1,115 @@
+name: Intended Changes Apply
+
+on:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  intended-changes-apply:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, '🎨 Intended-Changes')
+    steps:
+      - name: Set branch name
+        id: branch
+        run: echo "branch_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+
+      - name: Get assignee token
+        id: get_token
+        run: |
+          ASSIGNEE_UPPER=$(echo "${{ github.event.pull_request.user.login }}" | tr '[:lower:]' '[:upper:]' | sed 's/-/_/g')
+          TOKEN_NAME="TOKEN_${ASSIGNEE_UPPER}"
+          echo "token_name=$TOKEN_NAME" >> $GITHUB_OUTPUT
+
+      - name: Checkout fork repository
+        uses: actions/checkout@v4.2.2
+        with:
+          repository: ${{ github.event.pull_request.user.login }}/${{ github.event.repository.name }}
+          ref: ${{ steps.branch.outputs.branch_name }}
+          token: ${{ secrets[steps.get_token.outputs.token_name] }}
+
+      - name: Cache MinIO Client
+        uses: actions/cache@v4
+        id: cache-minio-client
+        with:
+          path: /usr/local/bin/mc
+          key: ${{ runner.os }}-minio-client
+
+      - name: Setup MinIO Client
+        if: steps.cache-minio-client.outputs.cache-hit != 'true'
+        run: |
+          wget https://dl.min.io/client/mc/release/linux-amd64/mc
+          chmod +x mc
+          sudo mv mc /usr/local/bin/
+          echo "MinIO Client (mc) has been installed successfully!"
+
+      - name: Download latest actual PNG files from MinIO
+        run: |
+          mc alias set --insecure pia http://macs.pia.space:32702 ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }}
+
+          BUCKET_NAME="frontend-e2e-demo"
+          BRANCH_FOLDER="${{ steps.branch.outputs.branch_name }}"
+
+          LATEST_TIME_FOLDER=$(mc ls --recursive pia/$BUCKET_NAME/$BRANCH_FOLDER/ | \
+            grep "PRE.*[0-9]" | \
+            awk '{print $6}' | \
+            sed 's/\///g' | \
+            sort -r | \
+            head -1)
+
+          if [ -z "$LATEST_TIME_FOLDER" ]; then
+            echo "Time folder not found."
+            exit 1
+          fi
+
+          echo "Latest time folder: $LATEST_TIME_FOLDER"
+          
+          mkdir -p ./downloaded-actuals
+          
+          echo "Downloading actual images..."
+          mc mirror --include "*-actual.png" --recursive \
+            pia/$BUCKET_NAME/$BRANCH_FOLDER/$LATEST_TIME_FOLDER/ \
+            ./downloaded-actuals/
+          
+          echo "Download completed!"
+          echo "Downloaded files:"
+          find ./downloaded-actuals -name "*-actual.png" -type f
+
+      - name: Apply intended changes
+        run: |
+          echo "Applying intended changes by replacing snapshot files..."
+          
+          TARGET_DIR="e2e/demo.test.ts-snapshots"
+          DOWNLOADED_DIR="./downloaded-actuals"
+          
+          find $DOWNLOADED_DIR -name "*-actual.png" -type f | while read -r actual_file; do
+            filename=$(basename "$actual_file")
+            
+            base_name="${filename%-actual.png}"
+            
+            platform="${base_name##*-}"
+            
+            target_filename="${base_name}-${platform}.png"
+            target_path="$TARGET_DIR/$target_filename"
+            
+            if [ -f "$target_path" ]; then
+              echo "Replacing $target_path with $actual_file"
+              cp "$actual_file" "$target_path"
+              echo "✓ Successfully replaced: $target_filename"
+            else
+              echo "⚠️  Target file not found: $target_path"
+              echo "Available files in $TARGET_DIR:"
+              ls -la "$TARGET_DIR/"
+            fi
+          done
+          
+          echo "File replacement completed!"
+          echo "Updated files in snapshots directory:"
+          ls -la "$TARGET_DIR/"
+
+      - name: Commit changes
+        run: |
+          git config --global user.name "${{ github.event.pull_request.user.login }}"
+          git config --global user.email "${{ github.event.pull_request.user.login }}@users.noreply.github.com"
+          git add .
+          git commit --allow-empty -m "chore: update snapshots for Intended-Changes"
+          git push origin ${{ steps.branch.outputs.branch_name }}
