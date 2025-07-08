@@ -33,6 +33,28 @@ jobs:
         node-version: '22'
         cache: 'npm'
 
+    - name: Cache canvas dependencies marker
+      uses: actions/cache@v4
+      id: cache-canvas-deps
+      with:
+        path: ~/.cache/canvas-deps-installed
+        key: ${{ runner.os }}-canvas-deps
+
+    - name: Install system dependencies for canvas
+      if: steps.cache-canvas-deps.outputs.cache-hit != 'true'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          libcairo2-dev \
+          libpango1.0-dev \
+          libjpeg-dev \
+          libgif-dev \
+          librsvg2-dev \
+          libpixman-1-dev
+        mkdir -p ~/.cache
+        echo "$(date)" > ~/.cache/canvas-deps-installed
+
     - name: Install dependencies
       run: npm ci --prefer-offline --no-audit --no-fund
       
