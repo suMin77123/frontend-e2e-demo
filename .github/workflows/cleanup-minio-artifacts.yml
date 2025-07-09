@@ -11,7 +11,12 @@ jobs:
     steps:
       - name: Set branch name
         id: branch
-        run: echo "branch_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "branch_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "branch_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Cache MinIO Client
         uses: actions/cache@v4
