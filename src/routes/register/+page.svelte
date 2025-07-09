@@ -39,7 +39,7 @@
             </div>
             
             <div class="form-group">
-                <label for="email">이메일</label>
+                <label for="email">이메일매일 매일 출근하기 싫어</label>
                 <input
                     type="email"
                     id="email"
