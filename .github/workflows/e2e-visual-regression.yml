@@ -88,7 +88,8 @@ jobs:
           key: ${{ runner.os }}-canvas-deps
 
       - name: Install system dependencies for canvas
-        if: steps.cache-canvas-deps.outputs.cache-hit != 'true' &&
+        if: |
+          steps.cache-canvas-deps.outputs.cache-hit != 'true' &&
           github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
           github.event.action == 'synchronize' && !github.event.pull_request.draft ||
           github.event_name == 'workflow_dispatch' &&
@@ -143,7 +144,8 @@ jobs:
             ${{ runner.os }}-playwright-deps-
 
       - name: Install Playwright browsers
-        if: steps.cache-playwright-browsers.outputs.cache-hit != 'true' &&
+        if: |
+          steps.cache-playwright-browsers.outputs.cache-hit != 'true' &&
           github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
           github.event.action == 'synchronize' && !github.event.pull_request.draft ||
           github.event_name == 'workflow_dispatch' &&
@@ -151,7 +153,8 @@ jobs:
         run: npx playwright install
 
       - name: Install Playwright system dependencies
-        if: steps.cache-playwright-system-deps.outputs.cache-hit != 'true' &&
+        if: |
+          steps.cache-playwright-system-deps.outputs.cache-hit != 'true' &&
           github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
           github.event.action == 'synchronize' && !github.event.pull_request.draft ||
           github.event_name == 'workflow_dispatch' &&
@@ -171,7 +174,8 @@ jobs:
 
       - name: Upload Playwright HTML Report
         uses: actions/upload-artifact@v4
-        if: always() &&
+        if: |
+          always() &&
           github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
           github.event.action == 'synchronize' && !github.event.pull_request.draft ||
           github.event_name == 'workflow_dispatch' &&
@@ -182,7 +186,8 @@ jobs:
           retention-days: 30
 
       - name: Upload visual comparison results
-        if: failure() &&
+        if: |
+          failure() &&
           github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
           github.event.action == 'synchronize' && !github.event.pull_request.draft ||
           github.event_name == 'workflow_dispatch' &&
@@ -214,7 +219,8 @@ jobs:
           echo "MinIO Client (mc) has been installed successfully!"
 
       - name: Upload to MinIO
-        if: always() &&
+        if: |
+          always() &&
           github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
           github.event.action == 'synchronize' && !github.event.pull_request.draft ||
           github.event_name == 'workflow_dispatch' &&
@@ -226,7 +232,9 @@ jobs:
           mc anonymous set download pia/frontend-e2e/${{ steps.branch.outputs.branch_name }}/
 
       - name: Comment PR with report link
-        if: always() && github.event_name == 'pull_request' &&
+        if: |
+          always() &&
+          github.event_name == 'pull_request' &&
           github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
           github.event.action == 'synchronize' && !github.event.pull_request.draft ||
           github.event_name == 'workflow_dispatch' &&
