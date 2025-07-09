@@ -1,0 +1,340 @@
+name: E2E Visual Regression Test
+
+on:
+  pull_request:
+    types: [opened, synchronize, closed, labeled]
+    branches: [dev, stage, master]
+  workflow_dispatch:
+    inputs:
+      target_workflow:
+        description: '수행할 작업을 선택해주세요'
+        required: true
+        default: 'Visual Regression Test'
+        type: choice
+        options:
+          - Visual Regression Test
+          - Cleanup MinIO Artifacts
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  setup-workflow:
+    runs-on: ubuntu-latest
+    outputs:
+      branch_name: ${{ steps.branch.outputs.branch_name }}
+      workflow_started_at: ${{ steps.start_time.outputs.workflow_started_at }}
+    steps:
+      - name: Set workflow start time
+        id: start_time
+        run: |
+          START_TIME=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          echo "workflow_started_at=${START_TIME}" >> $GITHUB_OUTPUT
+          echo "Started at: ${START_TIME}"
+
+      - name: Set branch name
+        id: branch
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "branch_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "branch_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+          fi
+
+  visual-regression:
+    needs: setup-workflow
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: |
+      github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
+      github.event.action == 'synchronize' ||
+      github.event_name == 'workflow_dispatch' &&
+      inputs.target_workflow == 'Visual Regression Test'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Cache canvas dependencies marker
+        uses: actions/cache@v4
+        id: cache-canvas-deps
+        with:
+          path: ~/.cache/canvas-deps-installed
+          key: ${{ runner.os }}-canvas-deps
+
+      - name: Install system dependencies for canvas
+        if: steps.cache-canvas-deps.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libcairo2-dev \
+            libpango1.0-dev \
+            libjpeg-dev \
+            libgif-dev \
+            librsvg2-dev \
+            libpixman-1-dev
+          mkdir -p ~/.cache
+          echo "$(date)" > ~/.cache/canvas-deps-installed
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: cache-playwright-browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-browsers-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-browsers-
+
+      - name: Cache Playwright system dependencies marker
+        uses: actions/cache@v4
+        id: cache-playwright-system-deps
+        with:
+          path: ~/.cache/playwright-deps-installed
+          key: ${{ runner.os }}-playwright-deps-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-deps-
+
+      - name: Install Playwright browsers
+        if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
+        run: npx playwright install
+        
+      - name: Install Playwright system dependencies
+        if: steps.cache-playwright-system-deps.outputs.cache-hit != 'true'
+        run: |
+          npx playwright install-deps
+          mkdir -p ~/.cache
+          echo "$(date)" > ~/.cache/playwright-deps-installed
+
+      - name: Run Playwright tests
+        run: npx playwright test --reporter=html --workers=4
+
+      - name: Upload Playwright HTML Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload visual comparison results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-comparison-diffs
+          path: |
+            test-results/**/*.png
+            test-results/**/*-diff.png
+            test-results/**/*-actual.png
+            test-results/**/*-expected.png
+          retention-days: 30
+
+      - name: Cache MinIO Client
+        if: always()
+        uses: actions/cache@v4
+        id: cache-minio-client
+        with:
+          path: /usr/local/bin/mc
+          key: ${{ runner.os }}-minio-client
+
+      - name: Setup MinIO Client
+        if: always() && steps.cache-minio-client.outputs.cache-hit != 'true'
+        run: |
+          wget https://dl.min.io/client/mc/release/linux-amd64/mc
+          chmod +x mc
+          sudo mv mc /usr/local/bin/
+          echo "MinIO Client (mc) has been installed successfully!"
+
+      - name: Upload to MinIO
+        if: always()
+        run: |
+          mc alias set --insecure pia http://macs.pia.space:32702 ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }}
+          mc cp --recursive playwright-report pia/frontend-e2e/${{ needs.setup.outputs.branch_name }}/${{ needs.setup.outputs.workflow_started_at }}/
+          mc cp --recursive test-results pia/frontend-e2e/${{ needs.setup.outputs.branch_name }}/${{ needs.setup.outputs.workflow_started_at }}/
+          mc anonymous set download pia/frontend-e2e/${{ needs.setup.outputs.branch_name }}/
+
+      - name: Comment PR with report link
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branchName = '${{ needs.setup.outputs.branch_name }}';
+            const startedAt = '${{ needs.setup.outputs.workflow_started_at }}';
+            const reportUrl = `http://macs.pia.space:32702/frontend-e2e/${branchName}/${startedAt}/playwright-report/index.html`;
+            
+            const comment = `## 📸 Visual Regression Test Report
+            
+            리포트가 생성되었습니다: [테스트 리포트 보기](${reportUrl})
+            
+            🔍 리포트에서 다음을 확인할 수 있습니다:
+            - 스크린샷 비교 결과
+            - 실패한 테스트의 Before/After 비교
+            - Diff, Side-by-Side, Slider 뷰 지원
+            
+            브랜치: \`${branchName}\`
+            리포트 생성 시간: ${new Date(startedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+            
+            ✋🏻 의도된 변경 사항이라면?
+            Labels에 \`🎨 Intended-Changes\` 라벨을 추가해주세요.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  intended-changes:
+    needs: setup-workflow
+    runs-on: ubuntu-latest
+    if: |
+      github.event.action == 'labeled' &&
+      contains(github.event.pull_request.labels.*.name, '🎨 Intended-Changes')
+    steps:
+      - name: Get assignee token
+        id: get_token
+        run: |
+          ASSIGNEE_UPPER=$(echo "${{ github.event.pull_request.user.login }}" | tr '[:lower:]' '[:upper:]' | sed 's/-/_/g')
+          TOKEN_NAME="TOKEN_${ASSIGNEE_UPPER}"
+          echo "token_name=$TOKEN_NAME" >> $GITHUB_OUTPUT
+
+      - name: Checkout fork repository
+        uses: actions/checkout@v4.2.2
+        with:
+          repository: ${{ github.event.pull_request.user.login }}/${{ github.event.repository.name }}
+          ref: ${{ steps.branch.outputs.branch_name }}
+          token: ${{ secrets[steps.get_token.outputs.token_name] }}
+
+      - name: Cache MinIO Client
+        uses: actions/cache@v4
+        id: cache-minio-client
+        with:
+          path: /usr/local/bin/mc
+          key: ${{ runner.os }}-minio-client
+
+      - name: Setup MinIO Client
+        if: steps.cache-minio-client.outputs.cache-hit != 'true'
+        run: |
+          wget https://dl.min.io/client/mc/release/linux-amd64/mc
+          chmod +x mc
+          sudo mv mc /usr/local/bin/
+          echo "MinIO Client (mc) has been installed successfully!"
+
+      - name: Download latest actual PNG files from MinIO
+        run: |
+          mc alias set --insecure pia http://macs.pia.space:32702 ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }}
+
+          BUCKET_NAME="frontend-e2e"
+          BRANCH_FOLDER="${{ needs.setup.outputs.branch_name }}"
+
+          LATEST_TIME_FOLDER=$(mc ls pia/$BUCKET_NAME/$BRANCH_FOLDER/ | \
+            grep -E "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z" | \
+            awk '{print $NF}' | \
+            sed 's/\///g' | \
+            sort -r | \
+            head -1)
+
+          if [ -z "$LATEST_TIME_FOLDER" ]; then
+            echo "Time folder not found."
+            echo "Available folders in $BRANCH_FOLDER:"
+            mc ls pia/$BUCKET_NAME/$BRANCH_FOLDER/
+            exit 1
+          fi
+
+          echo "Latest time folder: $LATEST_TIME_FOLDER"
+
+          mkdir -p ./temp-download
+
+          echo "Downloading all files..."
+          mc mirror \
+            pia/$BUCKET_NAME/$BRANCH_FOLDER/$LATEST_TIME_FOLDER/ \
+            ./temp-download/
+
+          echo "Moving actual images to target folder..."
+          mkdir -p ./downloaded-actuals
+          find ./temp-download -name "*-actual.png" -type f -exec cp {} ./downloaded-actuals/ \;
+
+          echo "Cleaning up temporary folder..."
+          rm -rf ./temp-download
+
+          echo "Download completed!"
+          echo "Downloaded actual image files:"
+          find ./downloaded-actuals -name "*-actual.png" -type f
+
+      - name: Apply intended changes
+        run: |
+          echo "Applying intended changes by replacing snapshot files..."
+
+          TARGET_DIR="e2e/demo.test.ts-snapshots"
+          DOWNLOADED_DIR="./downloaded-actuals"
+
+          find $DOWNLOADED_DIR -name "*-actual.png" -type f | while read -r actual_file; do
+            filename=$(basename "$actual_file")
+
+            base_name="${filename%-actual.png}"
+
+            platform="${base_name##*-}"
+
+            target_filename="${base_name}-${platform}.png"
+            target_path="$TARGET_DIR/$target_filename"
+
+            if [ -f "$target_path" ]; then
+              echo "Replacing $target_path with $actual_file"
+              cp "$actual_file" "$target_path"
+              echo "✓ Successfully replaced: $target_filename"
+            else
+              echo "⚠️  Target file not found: $target_path"
+              echo "Available files in $TARGET_DIR:"
+              ls -la "$TARGET_DIR/"
+            fi
+          done
+
+          echo "File replacement completed!"
+          echo "Updated files in snapshots directory:"
+          ls -la "$TARGET_DIR/"
+
+      - name: Commit changes
+        run: |
+          git config --global user.name "${{ github.event.pull_request.user.login }}"
+          git config --global user.email "${{ github.event.pull_request.user.login }}@users.noreply.github.com"
+          git checkout -B ${{ needs.setup.outputs.branch_name }}
+          git add e2e/
+          git commit --allow-empty -m "chore: update snapshots for Intended-Changes"
+          git push origin ${{ needs.setup.outputs.branch_name }} --force
+
+  cleanup-minio:
+    needs: setup-workflow
+    runs-on: ubuntu-latest
+    if: |
+      github.event.action == 'closed' ||
+      github.event_name == 'workflow_dispatch' &&
+      inputs.target_workflow == 'Cleanup MinIO Artifacts'
+    steps:
+      - name: Cache MinIO Client
+        uses: actions/cache@v4
+        id: cache-minio-client
+        with:
+          path: /usr/local/bin/mc
+          key: ${{ runner.os }}-minio-client
+
+      - name: Setup MinIO Client
+        if: steps.cache-minio-client.outputs.cache-hit != 'true'
+        run: |
+          wget https://dl.min.io/client/mc/release/linux-amd64/mc
+          chmod +x mc
+          sudo mv mc /usr/local/bin/
+          echo "MinIO Client (mc) has been installed successfully!"
+
+      - name: Cleanup MinIO Artifacts
+        run: |
+          mc alias set --insecure pia http://macs.pia.space:32702 ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }}
+          mc rm --recursive --force pia/frontend-e2e/${{ needs.setup.outputs.branch_name }}
