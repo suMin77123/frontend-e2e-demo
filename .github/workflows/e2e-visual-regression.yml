@@ -25,15 +25,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     if: |
-      github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-      github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-      github.event_name == 'workflow_dispatch' &&
-      inputs.target_workflow == 'Visual Regression Test' ||
-      github.event.action == 'labeled' &&
-      contains(github.event.pull_request.labels.*.name, '🎨 Intended-Changes') ||
+      (github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+      (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+      (github.event_name == 'workflow_dispatch' &&
+      inputs.target_workflow == 'Visual Regression Test') ||
+      (github.event.action == 'labeled' &&
+      contains(github.event.pull_request.labels.*.name, '🎨 Intended-Changes')) ||
       github.event.action == 'closed' ||
-      github.event_name == 'workflow_dispatch' &&
-      inputs.target_workflow == 'Cleanup MinIO Artifacts'
+      (github.event_name == 'workflow_dispatch' &&
+      inputs.target_workflow == 'Cleanup MinIO Artifacts')
     steps:
       - name: Set branch name
         id: branch
@@ -46,10 +46,10 @@ jobs:
 
       - name: Set workflow start time
         if: |
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          (github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test')
         id: start_time
         run: |
           START_TIME=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
@@ -58,18 +58,18 @@ jobs:
 
       - name: Checkout repository
         if: |
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          (github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test')
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         if: |
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          (github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test')
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -77,10 +77,10 @@ jobs:
 
       - name: Cache canvas dependencies marker
         if: |
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          (github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test')
         uses: actions/cache@v4
         id: cache-canvas-deps
         with:
@@ -90,10 +90,10 @@ jobs:
       - name: Install system dependencies for canvas
         if: |
           steps.cache-canvas-deps.outputs.cache-hit != 'true' &&
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          ((github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test'))
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -109,18 +109,18 @@ jobs:
 
       - name: Install dependencies
         if: |
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          (github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test')
         run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Cache Playwright browsers
         if: |
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          (github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test')
         uses: actions/cache@v4
         id: cache-playwright-browsers
         with:
@@ -131,10 +131,10 @@ jobs:
 
       - name: Cache Playwright system dependencies marker
         if: |
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          (github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test')
         uses: actions/cache@v4
         id: cache-playwright-system-deps
         with:
@@ -146,19 +146,19 @@ jobs:
       - name: Install Playwright browsers
         if: |
           steps.cache-playwright-browsers.outputs.cache-hit != 'true' &&
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          ((github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test'))
         run: npx playwright install
 
       - name: Install Playwright system dependencies
         if: |
           steps.cache-playwright-system-deps.outputs.cache-hit != 'true' &&
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          ((github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test'))
         run: |
           npx playwright install-deps
           mkdir -p ~/.cache
@@ -166,20 +166,20 @@ jobs:
 
       - name: Run Playwright tests
         if: |
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          (github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test')
         run: npx playwright test --reporter=html --workers=4
 
       - name: Upload Playwright HTML Report
         uses: actions/upload-artifact@v4
         if: |
           always() &&
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          ((github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test'))
         with:
           name: playwright-report
           path: playwright-report/
@@ -188,10 +188,10 @@ jobs:
       - name: Upload visual comparison results
         if: |
           failure() &&
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          ((github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test'))
         uses: actions/upload-artifact@v4
         with:
           name: visual-comparison-diffs
@@ -221,10 +221,10 @@ jobs:
       - name: Upload to MinIO
         if: |
           always() &&
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          ((github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test'))
         run: |
           mc alias set --insecure pia http://macs.pia.space:32702 ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }}
           mc cp --recursive playwright-report pia/frontend-e2e/${{ steps.branch.outputs.branch_name }}/${{ steps.start_time.outputs.workflow_started_at }}/
@@ -235,10 +235,10 @@ jobs:
         if: |
           always() &&
           github.event_name == 'pull_request' &&
-          github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master') ||
-          github.event.action == 'synchronize' && !github.event.pull_request.draft ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Visual Regression Test'
+          ((github.event.action == 'opened' && (github.event.pull_request.base.ref == 'stage' || github.event.pull_request.base.ref == 'master'))||
+          (github.event.action == 'synchronize' && !github.event.pull_request.draft)||
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Visual Regression Test'))
         uses: actions/github-script@v7
         with:
           script: |
@@ -382,8 +382,8 @@ jobs:
       - name: Cleanup MinIO Artifacts
         if: |
           github.event.action == 'closed' ||
-          github.event_name == 'workflow_dispatch' &&
-          inputs.target_workflow == 'Cleanup MinIO Artifacts'
+          (github.event_name == 'workflow_dispatch' &&
+          inputs.target_workflow == 'Cleanup MinIO Artifacts')
         run: |
           mc alias set --insecure pia http://macs.pia.space:32702 ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }}
           mc rm --recursive --force pia/frontend-e2e/${{ steps.branch.outputs.branch_name }}
